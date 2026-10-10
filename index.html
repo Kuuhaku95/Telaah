@@ -121,6 +121,17 @@ li span{font-size:14.5px;color:var(--haze)}
 .tips li span{color:var(--ink)}
 .tips li button{align-self:flex-start;min-height:44px;padding:0 14px;margin-top:4px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font-size:13.5px}
 .tips li button:hover{background:var(--ink);color:var(--marigold)}
+.lab{background:var(--night);border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:16px;animation:rise .7s .4s both}
+.lab h2{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(26px,4vw,34px);letter-spacing:-.02em}
+.lab p{margin:0;color:var(--haze);max-width:68ch}
+.lab .btns{display:flex;flex-wrap:wrap;gap:10px}
+.lab button{border:1.5px solid rgba(255,255,255,.6);background:transparent;color:var(--white)}
+.lab button:hover{transform:translateY(-2px);background:rgba(255,255,255,.12)}
+.lab button.hum{background:var(--mint);border-color:var(--mint);color:var(--ink)}
+.lab button.ai{background:var(--marigold);border-color:var(--marigold);color:var(--ink)}
+.lab .stat{font-family:var(--mono);font-size:14px;line-height:1.7;background:rgba(255,255,255,.08);padding:14px 16px;border-radius:12px;white-space:pre-line}
+.lab .lmsg{font-weight:600;color:var(--mint);min-height:1.5em}
+.lab small{color:var(--haze);font-size:13.5px}
 footer{font-size:13.5px;color:var(--haze);max-width:70ch;animation:rise .7s .5s both}
 footer b{color:var(--white)}
 @media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}h1 mark{background-size:100% 78%}}
@@ -150,6 +161,7 @@ footer b{color:var(--white)}
         <button class="go" id="go" type="button">Periksa <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         <button class="alt" id="edit" type="button">Ganti teks</button>
         <button class="alt" id="up" type="button">Unggah berkas</button>
+        <button class="alt" id="clear" type="button">Hapus semua</button>
         <input id="file" type="file" hidden accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.md">
         <span class="count" id="fname"></span>
         <span class="msg" id="msg" role="alert"></span>
@@ -172,6 +184,29 @@ footer b{color:var(--white)}
       <section class="panel tips"><h2>Saran revisi</h2><ul id="tips"></ul></section>
     </div>
   </div>
+
+  <section class="lab" id="lab">
+    <h2>Latih Telaah</h2>
+    <p>Beri contoh tulisan yang kamu tahu pasti penulisnya. Telaah menyesuaikan cara menilainya dari contoh itu. Makin banyak dan makin beragam contohnya, makin baik.</p>
+    <div class="btns">
+      <button class="hum" id="tH" type="button">Tambah berkas tulisan manusia</button>
+      <button class="ai" id="tA" type="button">Tambah berkas tulisan AI</button>
+    </div>
+    <div class="btns">
+      <button id="sH" type="button">Lembar di atas tulisan manusia</button>
+      <button id="sA" type="button">Lembar di atas tulisan AI</button>
+    </div>
+    <div class="stat" id="stat"></div>
+    <div class="lmsg" id="lmsg" role="status"></div>
+    <div class="btns">
+      <button id="xE" type="button">Simpan data latih ke berkas</button>
+      <button id="xI" type="button">Muat data latih</button>
+      <button id="xR" type="button">Hapus data latih</button>
+    </div>
+    <small>Data latih disimpan di browser ini saja, berupa angka pola, bukan isi tulisannya. Pengunjung lain dan perangkat lain tidak ikut terlatih. Pakai "Simpan data latih ke berkas" untuk memindahkannya.</small>
+    <input id="tfile" type="file" hidden multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.md">
+    <input id="ifile" type="file" hidden accept=".json">
+  </section>
 
   <footer><b>Cara kerja dan batasannya.</b> Telaah menghitung pola statistik: keseragaman panjang kalimat, frasa baku yang sering dipakai AI, dan ada tidaknya detail pribadi. Ini perkiraan, bukan bukti. Tulisan manusia yang sangat formal bisa ikut tertandai, dan tulisan AI yang sudah diedit bisa lolos. Jangan jadikan hasil ini satu-satunya dasar untuk menilai seseorang.</footer>
 </div>
@@ -215,8 +250,10 @@ function analisis(teks){
   });
   const rataSkor = det.reduce((a,d)=>a+d.skor,0)/(n||1);
   const jejak = n ? pribadiN/n : 0;
-  let skor = 100*(0.62*rataSkor + 0.23*seragam + 0.15*(1-jejak));
-  skor = Math.round(Math.max(3,Math.min(97,skor)));
+  const dasar = Math.round(Math.max(3,Math.min(97,100*(0.62*rataSkor + 0.23*seragam + 0.15*(1-jejak)))));
+  const hits = det.reduce((a,d)=>a+d.kena.length,0);
+  const fitur = [rataSkor, seragam, 1-jejak, Math.min(hits/(n||1)/2,1), Math.min(rata/30,1)];
+  const skor = MODEL ? Math.round(Math.max(1,Math.min(99,100*sig(MODEL,fitur)))) : dasar;
   const w = kata(teks);
   const yakin = w<80 ? "rendah (teks pendek)" : w<250 ? "sedang" : "cukup";
 
@@ -237,8 +274,56 @@ function analisis(teks){
     if(kata(ks[i])>28) teks += " Kalimat ini panjang, coba bagi dua.";
     saran.push({i, teks});
   });
-  return {ks, det, skor, yakin, seragam, jejak, alasan, saran, w};
+  return {ks, det, skor, yakin, seragam, jejak, alasan, saran, w, fitur, dasar};
 }
+
+/* ---------- Latihan (tersimpan di browser ini) ---------- */
+const KUNCI = "telaah_latih_v1";
+let DATA = []; try{ DATA = JSON.parse(localStorage.getItem(KUNCI)||"[]"); if(!Array.isArray(DATA)) DATA=[]; }catch(e){ DATA=[]; }
+let MODEL = null;
+function sig(w,x){ let z=w[0]; for(let i=0;i<x.length;i++) z+=w[i+1]*x[i]; return 1/(1+Math.exp(-z)); }
+function latih(d){ const k=d[0].x.length, w=new Array(k+1).fill(0); for(let it=0;it<600;it++){ const g=new Array(k+1).fill(0); for(const r of d){ const e=sig(w,r.x)-r.y; g[0]+=e; for(let i=0;i<k;i++) g[i+1]+=e*r.x[i]; } for(let i=0;i<=k;i++) w[i]-=1.5*(g[i]/d.length+(i?0.002*w[i]:0)); } return w; }
+function cukup(d){ return d.filter(r=>r.y).length>=3 && d.filter(r=>!r.y).length>=3; }
+function laporan(){
+  const a = DATA.filter(r=>r.y).length, h = DATA.length-a;
+  let t = "Contoh tersimpan: "+h+" tulisan manusia, "+a+" tulisan AI.";
+  if(!cukup(DATA)) t += "\nTambahkan minimal 3 contoh untuk tiap jenis supaya Telaah mulai belajar.";
+  else{
+    const awal = DATA.filter(r=>(r.d>=50)==!!r.y).length; let uji, ket;
+    if(DATA.length<=120){ uji=0; DATA.forEach((r,i)=>{ const s=DATA.filter((_,j)=>j!==i); if(cukup(s) && (sig(latih(s),r.x)>=.5)==!!r.y) uji++; }); ket="diuji pada contoh yang tidak ikut dilatih"; }
+    else{ uji = DATA.filter(r=>(sig(MODEL,r.x)>=.5)==!!r.y).length; ket="diuji pada contoh latihnya sendiri, jadi angkanya terlalu optimis"; }
+    t += "\nRumus bawaan: tepat "+awal+" dari "+DATA.length+".\nSetelah dilatih: tepat "+uji+" dari "+DATA.length+" ("+ket+").";
+  }
+  $("stat").textContent = t;
+}
+function simpan(){ try{ localStorage.setItem(KUNCI, JSON.stringify(DATA)); }catch(e){} MODEL = cukup(DATA) ? latih(DATA) : null; laporan(); }
+function tambah(nama, teks, y){ if(kata(teks)<30) return false; const h=analisis(teks); DATA.push({n:nama, y, x:h.fitur, d:h.dasar}); return true; }
+let labelPilih = 1;
+$("tH").onclick = ()=>{ labelPilih=0; $("tfile").click(); };
+$("tA").onclick = ()=>{ labelPilih=1; $("tfile").click(); };
+$("tfile").addEventListener("change", async ()=>{
+  const fs=[...$("tfile").files]; let ok=0, gagal=0;
+  for(const f of fs){ $("lmsg").textContent="Membaca "+f.name+"…"; try{ if(tambah(f.name,(await bacaBerkas(f)).trim(),labelPilih)) ok++; else gagal++; }catch(e){ gagal++; } }
+  $("tfile").value=""; simpan();
+  $("lmsg").textContent = ok+" contoh ditambahkan sebagai tulisan "+(labelPilih?"AI":"manusia")+"."+(gagal?" "+gagal+" berkas dilewati karena tidak terbaca atau kurang dari 30 kata.":"");
+});
+function dariLembar(y){
+  const t=($("teks").value||"").trim();
+  if(!t){ $("lmsg").textContent="Lembar masih kosong. Tempel teks atau unggah berkas dulu."; return; }
+  if(!tambah($("fname").textContent||"teks tempel", t, y)){ $("lmsg").textContent="Teks terlalu pendek untuk dijadikan contoh (minimal 30 kata)."; return; }
+  simpan(); $("lmsg").textContent="Lembar ini disimpan sebagai contoh tulisan "+(y?"AI":"manusia")+".";
+}
+$("sH").onclick = ()=>dariLembar(0);
+$("sA").onclick = ()=>dariLembar(1);
+$("xE").onclick = ()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(DATA)],{type:"application/json"})); a.download="telaah-data-latih.json"; document.body.appendChild(a); a.click(); a.remove(); };
+$("xI").onclick = ()=>$("ifile").click();
+$("ifile").addEventListener("change", async ()=>{
+  try{ const d=JSON.parse(await $("ifile").files[0].text()); const baik=d.filter(r=>r && Array.isArray(r.x) && r.x.length===5 && (r.y===0||r.y===1)); DATA=DATA.concat(baik); simpan(); $("lmsg").textContent=baik.length+" contoh dimuat."; }
+  catch(e){ $("lmsg").textContent="Berkas itu bukan data latih Telaah."; }
+  $("ifile").value="";
+});
+$("xR").onclick = ()=>{ const b=$("xR"); if(b.dataset.y){ DATA=[]; simpan(); delete b.dataset.y; b.textContent="Hapus data latih"; $("lmsg").textContent="Semua data latih dihapus."; } else { b.dataset.y=1; b.textContent="Tekan lagi untuk menghapus"; } };
+MODEL = cukup(DATA) ? latih(DATA) : null; laporan();
 
 /* ---------- Tampilan ---------- */
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -261,7 +346,7 @@ function tampil(teks, contoh){
   setTimeout(()=>{
     $("sheet").classList.remove("scanning");
     v.querySelectorAll("span").forEach(sp=>sp.classList.add("on"));
-    $("tag").textContent = contoh ? "Contoh" : "Hasil";
+    $("tag").textContent = contoh ? "Contoh" : MODEL ? "Hasil · sudah dilatih" : "Hasil";
     $("ringval").style.stroke = h.skor>=60 ? "var(--marigold)" : h.skor>=35 ? "#FFD97A" : "var(--mint)";
     $("ringval").style.strokeDashoffset = 326.7*(1-h.skor/100);
     naik($("score"), h.skor);
@@ -321,6 +406,13 @@ async function bacaBerkas(f){
   throw new Error(ext==="doc"||ext==="ppt" ? "lama" : "jenis");
 }
 $("up").addEventListener("click", ()=>$("file").click());
+$("clear").addEventListener("click", ()=>{
+  if(sibuk) return;
+  $("teks").value = ""; $("view").textContent = ""; $("fname").textContent = ""; $("msg").textContent = ""; $("file").value = "";
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("show"));
+  $("ringval").style.strokeDashoffset = 326.7; $("score").textContent = "0%";
+  mode(true); hitung("");
+});
 $("file").addEventListener("change", async ()=>{
   const f = $("file").files[0]; if(!f || sibuk) return;
   $("msg").textContent = ""; $("fname").textContent = "Membaca "+f.name+"…";
