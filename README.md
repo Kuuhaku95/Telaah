@@ -1,0 +1,2 @@
+# Telaah
+cek deteksi ai
