@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Telaah — Pendeteksi Tulisan AI</title>
+<meta name="description" content="Periksa apakah sebuah tulisan berbahasa Indonesia punya pola mirip buatan AI. Semua diproses di perangkatmu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap">
+<style>
+/* Konsep: selembar kertas tugas di atas meja biru kobalt, dipindai lalu distabilo. */
+:root{
+  color-scheme:light;
+  --cobalt:#2030D0; --cobalt-deep:#131C8C; --night:#0C1160;
+  --paper:#FFFDF5; --ink:#14143A; --ink-soft:#4B4B70;
+  --marigold:#FFC233; --marigold-soft:#FFE9A6; --mint:#7CF0C8; --white:#FFFFFF; --haze:#C9CFFF;
+  --display:'Bricolage Grotesque','Trebuchet MS',sans-serif;
+  --body:'Figtree',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--cobalt);color:var(--white);font-family:var(--body);font-size:16px;line-height:1.55;overflow-x:hidden;min-height:100vh;position:relative}
+body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.16) 1.2px,transparent 1.4px);background-size:26px 26px;animation:drift 40s linear infinite;pointer-events:none}
+.orb{position:fixed;border-radius:50%;pointer-events:none;border:2px solid rgba(255,255,255,.18)}
+.orb.a{width:520px;height:520px;right:-180px;top:-160px;animation:float 14s ease-in-out infinite}
+.orb.b{width:300px;height:300px;left:-120px;bottom:-80px;border-color:rgba(255,194,51,.5);animation:float 18s ease-in-out infinite reverse}
+.orb.c{width:90px;height:90px;right:12%;top:38%;background:var(--mint);border:0;opacity:.18;animation:float 11s ease-in-out infinite}
+@keyframes drift{to{background-position:260px 260px}}
+@keyframes float{50%{transform:translate(18px,-26px) rotate(8deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes swipe{from{background-size:0 100%}to{background-size:100% 100%}}
+@keyframes scan{0%{top:-12%}100%{top:100%}}
+@keyframes pulse{50%{transform:scale(1.25);opacity:.5}}
+
+.wrap{position:relative;max-width:1200px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:28px}
+@media(min-width:700px){.wrap{padding:28px 32px 72px;gap:36px}}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;animation:rise .6s both}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.03em}
+.brand .dot{width:14px;height:14px;border-radius:50%;background:var(--marigold);animation:pulse 2.4s ease-in-out infinite}
+.pill{font-size:13px;font-weight:600;border:1.5px solid rgba(255,255,255,.5);border-radius:999px;padding:6px 14px;display:inline-flex;align-items:center;gap:8px}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--mint)}
+
+.hero{display:flex;flex-direction:column;gap:14px;max-width:820px}
+h1{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(44px,10vw,104px);line-height:.95;letter-spacing:-.045em;text-wrap:balance;animation:rise .7s .08s both}
+h1 mark{color:var(--ink);background:linear-gradient(var(--marigold),var(--marigold)) no-repeat 0 60%/0 78%;padding:0 .08em;border-radius:.08em;animation:swipe .8s .7s cubic-bezier(.2,.8,.2,1) forwards;display:inline-block;transform:rotate(-2deg)}
+.lead{margin:0;font-size:clamp(16px,2.2vw,19px);color:var(--haze);max-width:56ch;animation:rise .7s .18s both}
+
+.grid{display:grid;gap:24px;align-items:start}
+.grid>*{min-width:0}
+@media(min-width:960px){.grid{grid-template-columns:1.2fr .9fr;gap:36px}}
+
+/* Kertas */
+.sheet{position:relative;background:var(--paper);color:var(--ink);border-radius:6px 22px 6px 22px;box-shadow:10px 12px 0 var(--night);transform:rotate(-.8deg);transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s;overflow:hidden;animation:rise .8s .28s both}
+.sheet:focus-within,.sheet:hover{transform:rotate(0);box-shadow:14px 18px 0 var(--night)}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;border-bottom:1.5px dashed #D9D5C4}
+.sheet-head label,.sheet-head b{font-family:var(--display);font-weight:700;font-size:18px}
+.count{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+textarea,.view{display:block;width:100%;min-height:340px;padding:20px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:17px;line-height:1.85;margin:0}
+textarea{resize:vertical;outline:0}
+textarea::placeholder{color:#8C8CA6}
+[hidden]{display:none!important}
+.view span{background-repeat:no-repeat;background-size:0 100%;transition:background-size .7s cubic-bezier(.2,.8,.2,1);-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:3px;cursor:default}
+.view span.s2{background-image:linear-gradient(var(--marigold),var(--marigold))}
+.view span.s1{background-image:linear-gradient(var(--marigold-soft),var(--marigold-soft));text-decoration:underline dotted #B07A00;text-underline-offset:4px}
+.view span.on{background-size:100% 100%}
+.view span.pick{outline:2px solid var(--cobalt);outline-offset:2px}
+.beam{position:absolute;left:0;right:0;height:12%;top:-12%;background:linear-gradient(to bottom,transparent,rgba(32,48,208,.22) 70%,var(--cobalt));border-bottom:3px solid var(--cobalt);pointer-events:none;opacity:0}
+.sheet.scanning .beam{opacity:1;animation:scan .85s ease-in-out 2 alternate}
+.sheet.scanning .view{opacity:.55;transition:opacity .2s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:0 20px 14px;font-size:13px;color:var(--ink-soft)}
+.legend i{display:inline-block;width:24px;height:12px;border-radius:3px;margin-right:8px;vertical-align:middle;background:var(--marigold)}
+.legend i.w{background:var(--marigold-soft);border-bottom:2px dotted #B07A00}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px 20px;border-top:1.5px dashed #D9D5C4}
+button{font:inherit;font-weight:700;min-height:48px;padding:0 22px;border-radius:999px;cursor:pointer;transition:transform .18s,box-shadow .18s,background .18s}
+.go{border:0;background:var(--ink);color:var(--paper);box-shadow:0 5px 0 var(--cobalt);display:inline-flex;align-items:center;gap:10px}
+.go:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--cobalt)}
+.go:active{transform:translateY(4px);box-shadow:0 1px 0 var(--cobalt)}
+.go svg{transition:transform .25s}
+.go:hover svg{transform:translateX(4px)}
+.alt{border:1.5px solid var(--ink);background:transparent;color:var(--ink)}
+.alt:hover{background:var(--ink);color:var(--paper)}
+button:disabled{opacity:.6;cursor:wait}
+:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+.sheet :focus-visible{outline-color:var(--cobalt)}
+.msg{font-size:14px;font-weight:600;color:#A3261C;flex-basis:100%}
+.msg:empty{display:none}
+
+/* Hasil */
+.side{display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--night);border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:14px;opacity:0;transform:translateY(18px);transition:opacity .5s,transform .5s cubic-bezier(.2,.8,.2,1)}
+.panel.show{opacity:1;transform:none}
+.panel h2{margin:0;font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.verdict{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12}
+.ring .track{stroke:rgba(255,255,255,.14)}
+.ring .val{stroke:var(--marigold);stroke-linecap:round;stroke-dasharray:326.7;stroke-dashoffset:326.7;transition:stroke-dashoffset 1.3s cubic-bezier(.2,.8,.2,1),stroke .4s}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.verdict div.t{flex:1;min-width:150px;display:flex;flex-direction:column;gap:4px}
+.verdict .big{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.1;letter-spacing:-.02em}
+.sub{font-size:14px;color:var(--haze)}
+.tag{align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--marigold);color:var(--ink);border-radius:999px;padding:3px 10px}
+.meter{display:flex;flex-direction:column;gap:8px}
+.meter .r{display:flex;justify-content:space-between;font-size:13.5px;color:var(--haze)}
+.meter .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:var(--mint);border-radius:4px;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+li{display:flex;flex-direction:column;gap:2px;opacity:0;transform:translateX(-10px);transition:opacity .45s,transform .45s}
+.show li{opacity:1;transform:none}
+li strong{font-weight:700}
+li span{font-size:14.5px;color:var(--haze)}
+.tips{background:var(--marigold);color:var(--ink)}
+.tips li span{color:var(--ink)}
+.tips li button{align-self:flex-start;min-height:44px;padding:0 14px;margin-top:4px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font-size:13.5px}
+.tips li button:hover{background:var(--ink);color:var(--marigold)}
+footer{font-size:13.5px;color:var(--haze);max-width:70ch;animation:rise .7s .5s both}
+footer b{color:var(--white)}
+@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}h1 mark{background-size:100% 78%}}
+</style>
+</head>
+<body>
+<div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span>Telaah</div>
+    <span class="pill"><i></i>Diproses di perangkatmu, tidak dikirim ke mana pun</span>
+  </header>
+
+  <div class="hero">
+    <h1>Tulisan <mark>siapa</mark> ini?</h1>
+    <p class="lead">Tempel tugas atau paragraf berbahasa Indonesia. Telaah memindai tiap kalimat dan menandai yang polanya mirip tulisan AI, lengkap dengan alasannya.</p>
+  </div>
+
+  <div class="grid">
+    <section class="sheet" id="sheet">
+      <div class="sheet-head"><label for="teks">Lembar tugas</label><span class="count" id="count"></span></div>
+      <textarea id="teks" hidden placeholder="Tempel teks di sini, atau unggah PDF, Word, Excel, PowerPoint…"></textarea>
+      <div class="view" id="view" aria-live="polite"></div>
+      <div class="beam"></div>
+      <div class="legend" id="legend"><span><i></i>Pola kuat mirip AI</span><span><i class="w"></i>Pola lemah</span></div>
+      <div class="actions">
+        <button class="go" id="go" type="button">Periksa <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="alt" id="edit" type="button">Ganti teks</button>
+        <button class="alt" id="up" type="button">Unggah berkas</button>
+        <input id="file" type="file" hidden accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.md">
+        <span class="count" id="fname"></span>
+        <span class="msg" id="msg" role="alert"></span>
+      </div>
+    </section>
+
+    <div class="side" id="side">
+      <section class="panel">
+        <span class="tag" id="tag">Contoh</span>
+        <div class="verdict">
+          <div class="ring"><svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true"><circle class="track" cx="66" cy="66" r="52"/><circle class="val" id="ringval" cx="66" cy="66" r="52"/></svg><b id="score">0%</b></div>
+          <div class="t"><span class="big" id="verdict"></span><span class="sub" id="conf"></span></div>
+        </div>
+        <div class="meter">
+          <div class="r"><span>Variasi panjang kalimat</span><span id="m1t"></span></div><div class="bar"><i id="m1"></i></div>
+          <div class="r"><span>Jejak pribadi dan detail konkret</span><span id="m2t"></span></div><div class="bar"><i id="m2"></i></div>
+        </div>
+      </section>
+      <section class="panel"><h2>Kenapa ditandai</h2><ul id="why"></ul></section>
+      <section class="panel tips"><h2>Saran revisi</h2><ul id="tips"></ul></section>
+    </div>
+  </div>
+
+  <footer><b>Cara kerja dan batasannya.</b> Telaah menghitung pola statistik: keseragaman panjang kalimat, frasa baku yang sering dipakai AI, dan ada tidaknya detail pribadi. Ini perkiraan, bukan bukti. Tulisan manusia yang sangat formal bisa ikut tertandai, dan tulisan AI yang sudah diedit bisa lolos. Jangan jadikan hasil ini satu-satunya dasar untuk menilai seseorang.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CONTOH = "Waktu PPL kemarin saya baru sadar kalau anak kelas dua itu gampang sekali meniru. Pendidikan karakter merupakan aspek yang sangat penting dalam membentuk kepribadian peserta didik di sekolah dasar. Selain itu, guru memiliki peran yang krusial sebagai teladan dalam menanamkan nilai-nilai positif kepada siswa. Ada satu anak yang ikut merapikan sepatu teman-temannya hanya karena melihat wali kelasnya melakukan itu tiap pagi. Dengan demikian, dapat disimpulkan bahwa keteladanan guru berkontribusi secara signifikan terhadap perkembangan karakter. Menurut saya itu lebih mengena daripada poster nilai-nilai yang ditempel di dinding kelas.";
+
+/* ---------- Mesin analisis (heuristik, berjalan di browser) ---------- */
+const FRASA = ["selain itu","dengan demikian","oleh karena itu","oleh sebab itu","dapat disimpulkan","secara keseluruhan","secara signifikan","sangat penting","peran yang krusial","peran penting","peran yang penting","memainkan peran","memegang peranan","merupakan aspek","merupakan salah satu","tidak dapat dipungkiri","tidak bisa dipungkiri","di era digital","dalam era","era globalisasi","penting untuk","perlu diingat","perlu dicatat","lebih lanjut","di sisi lain","dengan kata lain","sebagai hasilnya","pada dasarnya","pada akhirnya","kesimpulannya","berbagai aspek","berbagai faktor","nilai-nilai positif","berkontribusi","secara efektif","secara optimal","komprehensif","holistik","signifikan","hal ini menunjukkan","hal ini dapat","tidak hanya","tetapi juga","melainkan juga","dalam konteks","dalam rangka","guna meningkatkan","mampu meningkatkan","sangat berperan","menjadi kunci","kunci utama","landasan","fondasi yang kuat","secara berkelanjutan","dalam hal ini"];
+const PEMBUKA = ["selain itu","dengan demikian","oleh karena itu","oleh sebab itu","lebih lanjut","di sisi lain","dengan kata lain","secara keseluruhan","kesimpulannya","pada akhirnya","sebagai hasilnya","namun demikian","dalam hal ini"];
+const PRIBADI = /\b(saya|aku|kami|gue|gw|kita|ku|menurut saya|kemarin|tadi|waktu itu|dulu|teman|temanku|ibu saya|bapak saya|dosen saya|sih|kok|nih|banget|gampang|ternyata|jujur|rasanya|kayak|sempat|pernah)\b/i;
+
+function pecah(t){return t.split(/\n+/).flatMap(b=>b.replace(/\s+/g," ").trim().match(/[^.!?]+[.!?]+["”')\]]*|[^.!?]+$/g)||[]).map(s=>s.trim()).filter(Boolean)}
+/* Pilihan kata yang lebih sederhana untuk frasa baku */
+const GANTI = {"selain itu":["juga","lalu"],"dengan demikian":["jadi","karena itu"],"oleh karena itu":["jadi","makanya"],"oleh sebab itu":["jadi"],"dapat disimpulkan":["kesimpulan saya","yang saya tangkap"],"secara keseluruhan":["singkatnya"],"secara signifikan":["cukup besar","jelas terasa"],"signifikan":["besar","nyata"],"sangat penting":["penting","perlu"],"peran yang krusial":["peran besar"],"peran penting":["peran besar","andil"],"memainkan peran":["berperan","ikut menentukan"],"merupakan aspek":["adalah bagian"],"merupakan salah satu":["termasuk"],"tidak dapat dipungkiri":["memang","jelas"],"tidak bisa dipungkiri":["memang"],"di era digital":["sekarang","zaman sekarang"],"penting untuk":["perlu"],"lebih lanjut":["berikutnya"],"di sisi lain":["tapi","sebaliknya"],"dengan kata lain":["artinya","maksudnya"],"sebagai hasilnya":["akibatnya","hasilnya"],"pada dasarnya":["intinya"],"pada akhirnya":["akhirnya"],"berbagai aspek":["banyak hal"],"berbagai faktor":["banyak sebab"],"berkontribusi":["ikut membantu","menyumbang"],"secara efektif":["dengan baik"],"secara optimal":["sebaik mungkin"],"komprehensif":["menyeluruh","lengkap"],"holistik":["menyeluruh"],"dalam konteks":["dalam","untuk"],"dalam rangka":["untuk"],"guna meningkatkan":["supaya lebih"],"menjadi kunci":["paling menentukan"],"dalam hal ini":["di sini"]};
+function kata(t){return (t.trim().match(/\S+/g)||[]).length}
+
+function analisis(teks){
+  const ks = pecah(teks), n = ks.length;
+  const pj = ks.map(kata), rata = pj.reduce((a,b)=>a+b,0)/(n||1);
+  const sd = Math.sqrt(pj.reduce((a,b)=>a+(b-rata)**2,0)/(n||1));
+  const cv = rata ? sd/rata : 0;
+  const seragam = 1 - Math.min(cv/0.55,1);           // 1 = sangat seragam
+  const frasaKetemu = {};
+  let pribadiN = 0;
+  const det = ks.map((s,i)=>{
+    const l = s.toLowerCase();
+    const kena = FRASA.filter(f=>l.includes(f));
+    kena.forEach(f=>frasaKetemu[f]=(frasaKetemu[f]||0)+1);
+    const buka = PEMBUKA.some(p=>l.startsWith(p));
+    const prib = PRIBADI.test(s), angka = /\d/.test(s);
+    if(prib||angka) pribadiN++;
+    let x = 0.25 + Math.min(kena.length,3)*0.22 + (buka?0.1:0);
+    if(seragam>0.5 && Math.abs(pj[i]-rata) < rata*0.2) x += 0.1;
+    if(pj[i] >= 12 && pj[i] <= 22 && !prib) x += 0.04;
+    if(prib) x -= 0.28;
+    if(angka) x -= 0.08;
+    x = Math.max(0,Math.min(1,x));
+    return {skor:x, level: x>=0.6?2:x>=0.42?1:0, kena, buka, prib};
+  });
+  const rataSkor = det.reduce((a,d)=>a+d.skor,0)/(n||1);
+  const jejak = n ? pribadiN/n : 0;
+  let skor = 100*(0.62*rataSkor + 0.23*seragam + 0.15*(1-jejak));
+  skor = Math.round(Math.max(3,Math.min(97,skor)));
+  const w = kata(teks);
+  const yakin = w<80 ? "rendah (teks pendek)" : w<250 ? "sedang" : "cukup";
+
+  const alasan = [];
+  if(seragam>0.55) alasan.push(["Panjang kalimat terlalu seragam","Rata-rata "+rata.toFixed(0)+" kata per kalimat dengan selisih kecil. Tulisan manusia biasanya naik turun."]);
+  const top = Object.keys(frasaKetemu).sort((a,b)=>frasaKetemu[b]-frasaKetemu[a]).slice(0,5);
+  if(top.length) alasan.push(["Frasa baku yang sering dipakai AI", top.map(f=>"“"+f+"”").join(", ")+"."]);
+  if(det.filter(d=>d.buka).length>=2) alasan.push(["Kalimat dibuka kata penghubung yang sama polanya","Beberapa kalimat dimulai dengan penghubung formal secara berurutan."]);
+  if(jejak<0.25) alasan.push(["Minim jejak pribadi","Hampir tidak ada pengalaman sendiri, angka, nama, atau contoh spesifik."]);
+  if(!alasan.length) alasan.push(["Tidak ada pola yang menonjol","Panjang kalimat bervariasi dan ada detail yang terasa milik penulis."]);
+
+  const saran = [];
+  det.forEach((d,i)=>{
+    if(d.level===0 || saran.length>=12) return;
+    const tukar = d.kena.filter(f=>GANTI[f]).map(f=>"“"+f+"” → "+GANTI[f].map(g=>"“"+g+"”").join(" atau "));
+    let teks = tukar.length ? "Sederhanakan kata: "+tukar.join("; ")+". " : d.kena.length ? "Frasa “"+d.kena[0]+"” terdengar seperti templat, ganti dengan kata sehari-hari. " : "";
+    teks += !d.prib ? "Lalu tambahkan satu hal yang hanya kamu yang tahu: siapa, kapan, di mana, atau contoh yang kamu alami atau baca." : "Pecah jadi kalimat yang lebih pendek supaya iramanya tidak datar.";
+    if(kata(ks[i])>28) teks += " Kalimat ini panjang, coba bagi dua.";
+    saran.push({i, teks});
+  });
+  return {ks, det, skor, yakin, seragam, jejak, alasan, saran, w};
+}
+
+/* ---------- Tampilan ---------- */
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let sibuk = false;
+
+function hitung(t){ $("count").textContent = kata(t)+" kata · "+pecah(t).length+" kalimat"; }
+function mode(edit){ $("teks").hidden=!edit; $("view").hidden=edit; $("legend").hidden=edit; $("edit").hidden=edit; if(edit) $("teks").focus(); }
+function isi(ul, rows, build){ ul.textContent=""; rows.forEach((r,k)=>{ const li=document.createElement("li"); li.style.transitionDelay=(0.15+k*0.1)+"s"; build(li,r); ul.appendChild(li); }); }
+function naik(el, to){ if(reduce){el.textContent=to+"%";return;} const t0=performance.now(); (function f(t){ const p=Math.min((t-t0)/1300,1), e=1-Math.pow(1-p,3); el.textContent=Math.round(to*e)+"%"; if(p<1) requestAnimationFrame(f); })(t0); }
+
+function tampil(teks, contoh){
+  const h = analisis(teks), v = $("view");
+  v.textContent = "";
+  h.ks.forEach((s,i)=>{ const sp=document.createElement("span"); sp.id="k"+i; const lv=h.det[i].level; if(lv) sp.className="s"+lv; sp.style.transitionDelay=(Math.min(i,25)*0.07)+"s"; sp.textContent=s; v.append(sp," "); });
+  hitung(teks); mode(false);
+  const panels = [...document.querySelectorAll(".panel")];
+  panels.forEach(p=>p.classList.remove("show"));
+  $("ringval").style.strokeDashoffset = 326.7; $("m1").style.width="0"; $("m2").style.width="0";
+  sibuk = true; $("go").disabled = true; $("sheet").classList.add("scanning");
+  setTimeout(()=>{
+    $("sheet").classList.remove("scanning");
+    v.querySelectorAll("span").forEach(sp=>sp.classList.add("on"));
+    $("tag").textContent = contoh ? "Contoh" : "Hasil";
+    $("ringval").style.stroke = h.skor>=60 ? "var(--marigold)" : h.skor>=35 ? "#FFD97A" : "var(--mint)";
+    $("ringval").style.strokeDashoffset = 326.7*(1-h.skor/100);
+    naik($("score"), h.skor);
+    $("verdict").textContent = h.skor>=70 ? "Banyak pola mirip AI" : h.skor>=45 ? "Campuran, perlu dibaca ulang" : h.skor>=25 ? "Sebagian besar terasa manusia" : "Terasa ditulis manusia";
+    const n = h.det.filter(d=>d.level).length;
+    $("conf").textContent = n+" dari "+h.ks.length+" kalimat ditandai · keyakinan "+h.yakin;
+    const v1 = Math.round((1-h.seragam)*100), v2 = Math.round(h.jejak*100);
+    $("m1").style.width=v1+"%"; $("m1t").textContent = v1<35?"rendah":v1<65?"sedang":"tinggi";
+    $("m2").style.width=v2+"%"; $("m2t").textContent = v2<25?"rendah":v2<55?"sedang":"tinggi";
+    isi($("why"), h.alasan, (li,[a,b])=>{ const st=document.createElement("strong"); st.textContent=a; const sp=document.createElement("span"); sp.textContent=b; li.append(st,sp); });
+    if(h.saran.length) isi($("tips"), h.saran, (li,s)=>{ const st=document.createElement("strong"); st.textContent="Kalimat "+(s.i+1); const sp=document.createElement("span"); sp.textContent=s.teks; const b=document.createElement("button"); b.type="button"; b.textContent="Tunjukkan kalimatnya"; b.onclick=()=>{ document.querySelectorAll(".pick").forEach(x=>x.classList.remove("pick")); const t=$("k"+s.i); t.classList.add("pick"); t.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"}); }; li.append(st,sp,b); });
+    else isi($("tips"), [0], li=>{ const sp=document.createElement("span"); sp.textContent="Tidak ada yang perlu direvisi dari sisi pola. Tetap periksa isi dan sumbermu."; li.append(sp); });
+    panels.forEach((p,k)=>setTimeout(()=>p.classList.add("show"), reduce?0:k*140));
+    sibuk = false; $("go").disabled = false;
+  }, reduce ? 0 : 1750);
+}
+
+$("teks").addEventListener("input", ()=>hitung($("teks").value));
+$("edit").addEventListener("click", ()=>{ $("msg").textContent=""; mode(true); hitung($("teks").value); });
+$("go").addEventListener("click", ()=>{
+  if(sibuk) return;
+  $("msg").textContent = "";
+  if($("teks").hidden){ mode(true); hitung($("teks").value); if(!$("teks").value.trim()) return; }
+  const t = $("teks").value.trim();
+  if(!t){ $("msg").textContent = "Belum ada teks. Tempel tulisan atau unggah berkas dulu."; return; }
+  tampil(t, false);
+});
+
+/* ---------- Baca berkas (semua di browser) ---------- */
+const CDN = "https://cdnjs.cloudflare.com/ajax/libs/";
+const dimuat = {};
+function muat(src){ return dimuat[src] || (dimuat[src] = new Promise((ok,no)=>{ const s=document.createElement("script"); s.src=CDN+src; s.onload=ok; s.onerror=()=>no(new Error("net")); document.head.appendChild(s); })); }
+async function bacaBerkas(f){
+  const ext = f.name.split(".").pop().toLowerCase();
+  if(["txt","md","csv"].includes(ext)) return await f.text();
+  const buf = await f.arrayBuffer();
+  if(ext==="pdf"){
+    await muat("pdf.js/3.11.174/pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = CDN+"pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({data:buf}).promise; const out=[];
+    for(let p=1;p<=pdf.numPages;p++){ const c = await (await pdf.getPage(p)).getTextContent(); out.push(c.items.map(x=>x.str).join(" ")); }
+    return out.join("\n");
+  }
+  if(ext==="docx"){ await muat("mammoth/1.6.0/mammoth.browser.min.js"); return (await mammoth.extractRawText({arrayBuffer:buf})).value; }
+  if(ext==="xlsx"||ext==="xls"){
+    await muat("xlsx/0.18.5/xlsx.full.min.js");
+    const wb = XLSX.read(buf,{type:"array"});
+    return wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,blankrows:false}).flat().filter(c=>typeof c==="string" && c.trim().split(/\s+/).length>=4).join("\n")).join("\n");
+  }
+  if(ext==="pptx"){
+    await muat("jszip/3.10.1/jszip.min.js");
+    const zip = await JSZip.loadAsync(buf); const out=[];
+    const nama = Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>parseInt(a.match(/\d+/)[0])-parseInt(b.match(/\d+/)[0]));
+    for(const n of nama){ const x = await zip.files[n].async("string"); const doc = new DOMParser().parseFromString(x,"application/xml"); out.push([...doc.getElementsByTagName("a:p")].map(p=>p.textContent).filter(Boolean).join("\n")); }
+    return out.join("\n");
+  }
+  throw new Error(ext==="doc"||ext==="ppt" ? "lama" : "jenis");
+}
+$("up").addEventListener("click", ()=>$("file").click());
+$("file").addEventListener("change", async ()=>{
+  const f = $("file").files[0]; if(!f || sibuk) return;
+  $("msg").textContent = ""; $("fname").textContent = "Membaca "+f.name+"…";
+  try{
+    const t = (await bacaBerkas(f)).trim();
+    if(!t){ $("fname").textContent=""; $("msg").textContent = "Tidak ada teks yang terbaca. Kalau ini PDF hasil pindai (gambar), teksnya tidak bisa diambil."; return; }
+    $("teks").value = t; $("fname").textContent = f.name; tampil(t, false);
+  }catch(e){
+    $("fname").textContent = "";
+    $("msg").textContent = e.message==="lama" ? "Format lama (.doc/.ppt) belum didukung. Simpan ulang sebagai .docx atau .pptx, lalu unggah lagi."
+      : e.message==="jenis" ? "Jenis berkas ini belum didukung. Pakai PDF, Word (.docx), Excel, PowerPoint (.pptx), CSV, atau TXT."
+      : e.message==="net" ? "Pembaca berkas gagal dimuat. Periksa koneksi internet, lalu coba lagi."
+      : "Berkas tidak bisa dibaca. Mungkin rusak atau dikunci kata sandi.";
+  }finally{ $("file").value = ""; }
+});
+tampil(CONTOH, true);
+</script>
+</body>
+</html>
